@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout | UZI18K</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080808;color:#f5f5f5;font-family:Arial,sans-serif}.wrap{max-width:980px;margin:auto;padding:28px 18px}.brand{display:block;width:205px;height:auto;margin:0 0 18px 0}.brand img{display:block;width:100%;height:auto;object-fit:contain}.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:22px}.card{background:#111;border:1px solid #292929;border-radius:14px;padding:20px}.title{font-size:22px;margin:0 0 18px}.muted{color:#aaa}.field{margin:12px 0}.field label{display:block;font-size:13px;color:#bbb;margin-bottom:6px}.field input{width:100%;padding:13px;border-radius:9px;border:1px solid #333;background:#181818;color:#fff}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{width:100%;padding:14px;border:0;border-radius:10px;background:#d4af37;color:#080808;font-weight:800;cursor:pointer}.btn:disabled{opacity:.5;cursor:not-allowed}.option{padding:12px;border:1px solid #333;border-radius:10px;margin:8px 0;cursor:pointer}.option:hover{border-color:#d4af37}.error{color:#ff7070;margin-top:10px}.payment-status{display:none;margin-top:14px;padding:14px;border-radius:10px;border:1px solid #333;background:#151515}.payment-status strong{display:block;margin-bottom:6px}.total{font-size:22px;font-weight:800}.back{color:#d4af37;text-decoration:none;display:inline-block;margin-bottom:18px}@media(max-width:760px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
+</style>
+<script src="https://sdk.mercadopago.com/js/v2"></script></head>
+<body>
+<div class="wrap">
+<div class="brand"><img src="./logo-uzi18k.png" alt="UZI18K Semi Joias"></div>
+<a class="back" href="./">← Voltar para a loja</a>
+<div class="grid">
+<section class="card">
+<h1 class="title">Finalizar compra</h1>
+<div class="field"><label>CEP de entrega</label><input id="cep" inputmode="numeric" maxlength="9" placeholder="00000-000"><div id="cepStatus" class="muted" style="margin-top:6px;font-size:12px"></div></div>
+<button class="btn" id="quote">Calcular frete</button>
+<div id="shipping" style="margin-top:18px"></div>
+<hr style="border-color:#292929;margin:22px 0">
+<h2 style="font-size:17px">Seus dados</h2>
+<div class="field"><label>Nome completo</label><input id="name"></div>
+<div class="field"><label>E-mail</label><input id="email" type="email"></div>
+<div class="row"><div class="field"><label>Telefone</label><input id="phone"></div><div class="field"><label>CPF</label><input id="document"></div></div>
+<div class="row"><div class="field"><label>Número</label><input id="number"></div><div class="field"><label>Complemento</label><input id="complement"></div></div>
+<div class="field"><label>Endereço</label><input id="address"></div>
+<div class="row"><div class="field"><label>Bairro</label><input id="neighborhood"></div><div class="field"><label>Cidade/UF</label><input id="cityState"></div></div>
+<div class="error" id="error"></div>
+</section>
+<aside class="card">
+<h2 class="title">Resumo</h2>
+<div id="items" class="muted">Carregando carrinho...</div>
+<div style="display:flex;justify-content:space-between;margin-top:20px"><span>Subtotal</span><strong id="subtotal">R$ 0,00</strong></div>
+<div style="display:flex;justify-content:space-between;margin-top:10px"><span>Frete</span><strong id="freight">A calcular</strong></div>
+<hr style="border-color:#292929;margin:18px 0">
+<div style="display:flex;justify-content:space-between"><span>Total</span><span class="total" id="total">R$ 0,00</span></div><div style="display:flex;justify-content:space-between;margin-top:8px;color:#8be28b;font-size:13px"><span>💳 No Pix</span><strong id="pixTotal">R$ 0,00</strong></div>
+<button class="btn" style="margin-top:20px" id="continue" disabled>Continuar para pagamento</button><div id="paymentSection" style="display:none;margin-top:22px"><hr style="border-color:#292929;margin:22px 0"><h2 style="font-size:17px">Pagamento seguro</h2><p class="muted" style="font-size:13px">Escolha Pix ou cartão. O pagamento é processado pelo Mercado Pago.</p><div id="paymentBrick_container"></div><div id="pixResult" style="display:none;margin-top:16px;padding:16px;border:1px solid #3a3a3a;border-radius:12px;background:#151515"><h3 style="margin:0 0 10px;font-size:16px">Pague com Pix</h3><div id="pixStatus" class="muted" style="font-size:13px;margin-bottom:12px">Aguardando geração do Pix...</div><img id="pixQr" alt="QR Code Pix" style="display:none;width:220px;height:220px;max-width:100%;background:#fff;padding:8px;border-radius:8px;margin:0 auto 14px"><div id="pixCopyWrap" style="display:none"><label style="display:block;font-size:12px;color:#bbb;margin-bottom:6px">Pix Copia e Cola</label><div style="display:flex;gap:8px"><input id="pixCopy" readonly style="flex:1;min-width:0;padding:12px;border-radius:8px;border:1px solid #333;background:#0f0f0f;color:#fff;font-size:11px"><button type="button" class="btn" id="pixCopyBtn" style="width:auto;padding:12px 16px">Copiar</button></div></div></div><div class="error" id="paymentError"></div><div class="payment-status" id="paymentStatus"><strong id="paymentStatusTitle">Aguardando pagamento</strong><span class="muted" id="paymentStatusText">Estamos aguardando a confirmação do Mercado Pago.</span></div></div>
+</aside>
+</div>
+</div>
+<script>
+const API="https://meulxqleymbjkedaagby.supabase.co/functions/v1/checkout-api";
+const SHIPPING_API="https://meulxqleymbjkedaagby.supabase.co/functions/v1/shipping-quote";
+const money=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v||0));
+const clean=v=>String(v||"").replace(/\D/g,"");
+
+function normalizeCart(raw){
+  if(!raw) return [];
+  if(typeof raw==="string"){try{return normalizeCart(JSON.parse(raw))}catch{return []}}
+  if(Array.isArray(raw)) return raw;
+  if(typeof raw==="object"){
+    for(const k of ["items","cart","carrinho","products","produtos"]){
+      if(Array.isArray(raw[k])) return raw[k];
+    }
+  }
+  return [];
+}
+function scoreCart(arr){
+  return arr.reduce((n,i)=>{
+    if(!i||typeof i!=="object") return n;
+    const hasName=!!(i.name||i.product_name||i.title||i.nome);
+    const hasPrice=i.price!=null||i.preco!=null||i.unit_price!=null||i.valor!=null;
+    const hasQty=i.quantity!=null||i.qty!=null||i.quantidade!=null;
+    const hasKey=!!(i.product_key||i.productKey||i.key||i.id);
+    return n+(hasName?3:0)+(hasPrice?3:0)+(hasQty?1:0)+(hasKey?1:0);
+  },0);
+}
+function readCart(){
+  const candidates=[];
+  const add=(source,raw)=>{const arr=normalizeCart(raw);if(arr.length&&scoreCart(arr)>=Math.max(3,arr.length*3))candidates.push({source,arr,score:scoreCart(arr)})};
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i); if(!k) continue;
+    const v=localStorage.getItem(k);
+    add("localStorage:"+k,v);
+  }
+  for(let i=0;i<sessionStorage.length;i++){
+    const k=sessionStorage.key(i); if(!k) continue;
+    const v=sessionStorage.getItem(k);
+    add("sessionStorage:"+k,v);
+  }
+  for(const k of ["cart","carrinho","uziCart","uzi18kCart","cartItems","cartItemsUzi18k"]){
+    try{add("global:"+k,window[k])}catch{}
+  }
+  if(window.uziCart&&typeof window.uziCart==="object")add("window.uziCart",window.uziCart);
+  if(window.cart&&typeof window.cart==="object")add("window.cart",window.cart);
+  candidates.sort((a,b)=>b.score-a.score);
+  return candidates[0]?.arr||[];
+}
+const isTestPix=new URLSearchParams(location.search).get("test")==="pix";
+// Compatibilidade temporária: versões antigas do teste podem enviar a chave teste-pix-zik.
+const TEST_PIX_KEY="teste-pix-uzi18k";
+let cart=isTestPix?[{product_key:TEST_PIX_KEY,name:"TESTE PIX UZI18K",price:1,quantity:1}]:readCart(),subtotal=0,shipping=null,pixSubtotal=0,catalogQuote=null;
+const itemsEl=document.getElementById("items");
+if(!cart.length){itemsEl.textContent="Seu carrinho está vazio."}else{
+ itemsEl.innerHTML=cart.map(i=>{const q=Number(i.quantity||i.qty||i.quantidade||1),p=Number(i.price??i.preco??i.unit_price??i.valor??0);return '<div style="padding:9px 0;border-bottom:1px solid #292929">'+(i.name||i.product_name||i.title||i.nome||"Produto")+' <span class="muted">× '+q+'</span><div>'+money(p*q)+'</div></div>'}).join("");
+ subtotal=cart.reduce((s,i)=>s+Number(i.price??i.preco??i.unit_price??i.valor??0)*Number(i.quantity||i.qty||i.quantidade||1),0);
+}
+document.getElementById("subtotal").textContent=money(subtotal);
+document.getElementById("total").textContent=money(subtotal);
+document.getElementById("pixTotal").textContent=money(subtotal*.75);
+let cepTimer;
+async function lookupCep(cep){
+  const status=document.getElementById("cepStatus");
+  if(cep.length!==8){status.textContent="";return}
+  status.textContent="Buscando endereço...";
+  try{
+    const r=await fetch("https://viacep.com.br/ws/"+cep+"/json/");
+    const d=await r.json();
+    if(d.erro) throw new Error("CEP não encontrado");
+    document.getElementById("address").value=d.logradouro||"";
+    document.getElementById("neighborhood").value=d.bairro||"";
+    document.getElementById("cityState").value=(d.localidade||"")+(d.uf?" / "+d.uf:"");
+    status.textContent="Endereço encontrado. Confira os dados antes de continuar.";
+  }catch(e){
+    status.textContent=e.message;
+    document.getElementById("address").value="";
+    document.getElementById("neighborhood").value="";
+    document.getElementById("cityState").value="";
+  }
+}
+document.getElementById("cep").addEventListener("input",e=>{
+  let v=clean(e.target.value).slice(0,8);
+  e.target.value=v.length>5?v.slice(0,5)+"-"+v.slice(5):v;
+  clearTimeout(cepTimer);
+  cepTimer=setTimeout(()=>lookupCep(clean(v)),350);
+});
+document.getElementById("quote").onclick=async()=>{
+ const cep=clean(document.getElementById("cep").value); if(cep.length!==8)return;
+ const el=document.getElementById("shipping");el.innerHTML='<span class="muted">Calculando...</span>';
+ try{
+  const keyMap={"produto-ancora":"pingente-ancora","produto-pulseira-grumet":"pulseira-grumet-2-5mm","produto-pulseira-cartier":"pulseira-cartier-2mm","produto-pulseira-piastrine-3mm":"pulseira-piastrini-3mm","produto-duplix-5mm":"pulseira-duplix-5mm","produto-duplix-3mm":"pulseira-duplix-3mm","produto-corrente-duplix":"duplix-3mm","produto-cordao-entrelacado":"cordao-baiano-3mm","produto-corrente-baiano-entrelacado":"cordao-baiano-3mm","produto-corrente-veneziana":"veneziana-1mm","produto-corrente-grumet":"grumet-3mm","produto-corrente-cadeado":"cadeado-3mm","produto-corrente-cartier":"cartier-2mm","produto-corrente-elo-portugues":"elo-portugues-2mm","elo-portges-mm":"elo-portugues-2mm","elo-portugues-mm":"elo-portugues-2mm","elo-portges-mm|65cm":"elo-portugues-2mm","elo-portugues-mm|65cm":"elo-portugues-2mm","produto-corrente-piastrini":"piastrini-2mm","produto-escapulario-cruz":"escapulario-espirito-santo-cruz","produto-escapulario-jesus-nossa-senhora":"escapulario-nossa-senhora-cristo","produto-pulseira-veneziana":"pulseira-veneziana-1mm","produto-pulseira-cadeado":"pulseira-cadeado-2-8mm"};
+  const apiItems=cart.map(i=>{const rawKey=String(i.product_key||i.productKey||i.key||i.productId||i.id||"");const parts=rawKey.split("|");const baseKey=parts[0];const embeddedVariant=parts.length>1?parts.slice(1).join("|").trim():null;return {product_key:(keyMap[baseKey]||({"elo-portges-mm":"elo-portugues-2mm","elo-portugues-mm":"elo-portugues-2mm"}[baseKey])||baseKey),variant:i.variant||i.size||i.tamanho||embeddedVariant||((baseKey==="produto-escapulario-cruz"||baseKey==="produto-escapulario-jesus-nossa-senhora")?"70cm":null),quantity:Number(i.quantity||i.qty||i.quantidade||1),unit_price:Number(i.price??i.preco??i.unit_price??i.valor??0)}});
+  const res=isTestPix?null:await fetch(SHIPPING_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({destination_cep:cep,items:apiItems})});
+  const data=isTestPix?{quotes:[{name:"Frete grátis",company:"UZI18K — teste",delivery_time:"",price:0}]}:await res.json();if(!isTestPix&&!res.ok)throw new Error(data.error||"Erro ao calcular");
+  const quoteRes=await fetch(API+"/quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:apiItems})});
+  const quoteData=await quoteRes.json();if(!quoteRes.ok)throw new Error(quoteData.error||"Não foi possível validar o estoque e os preços.");
+  catalogQuote=quoteData;
+  pixSubtotal=Number((quoteData.items||[]).reduce((s,i)=>s+Number(i.pix_subtotal||0),0));
+  el.innerHTML=(data.quotes||[]).map((q,n)=>'<div class="option" data-i="'+n+'"><strong>'+q.name+'</strong><br><span class="muted">'+(q.company||"")+(q.delivery_time?" · "+q.delivery_time+" dias úteis":"")+'</span><br><strong>'+money(q.price)+'</strong></div>').join("")||'<span class="muted">Nenhuma opção disponível.</span>';
+  el.querySelectorAll(".option").forEach(o=>o.onclick=()=>{el.querySelectorAll(".option").forEach(x=>x.style.borderColor="#333");o.style.borderColor="#d4af37";shipping=data.quotes[Number(o.dataset.i)];document.getElementById("freight").textContent=money(shipping.price);document.getElementById("total").textContent=money(subtotal+shipping.price);document.getElementById("pixTotal").textContent=money(pixSubtotal+Number(shipping.price||0));document.getElementById("continue").disabled=false});
+ }catch(e){el.innerHTML='<span class="error">'+e.message+"</span>"}
+};
+function startPaymentStatusPolling(orderId){
+  const box=document.getElementById("paymentStatus"),title=document.getElementById("paymentStatusTitle"),text=document.getElementById("paymentStatusText");
+  box.style.display="block";title.textContent="Aguardando pagamento";text.textContent="Estamos aguardando a confirmação do Mercado Pago.";
+  let tries=0;
+  const poll=async()=>{
+    tries++;
+    try{
+      const res=await fetch(API+"/order-status?order_id="+encodeURIComponent(orderId));
+      const data=await res.json(); const o=data.order||{}; const s=String(o.status||"");
+      if(s==="paid"){
+        title.textContent="Pagamento aprovado ✓";title.style.color="#8be28b";text.textContent="Seu pagamento foi confirmado e seu pedido está sendo processado.";
+        return;
+      }
+      if(["failed","cancelled","refunded"].includes(s)){
+        title.textContent=s==="cancelled"?"Pagamento cancelado":"Pagamento não aprovado";title.style.color="#ff7070";text.textContent="O pagamento não foi confirmado. Se necessário, tente novamente.";
+        return;
+      }
+    }catch(e){console.error("payment_status_poll",e)}
+    if(tries<120)setTimeout(poll,5000);
+  };
+  poll();
+}
+let paymentBrickController=null;
+async function openPayment(){
+  const required=[["name","Nome completo"],["email","E-mail"],["phone","Telefone"],["document","CPF"],["number","Número"],["address","Endereço"],["neighborhood","Bairro"],["cityState","Cidade/UF"]];
+  const missing=required.filter(([id])=>!document.getElementById(id).value.trim());
+  const err=document.getElementById("error");
+  if(!cart.length){err.textContent="Seu carrinho está vazio.";return}
+  if(!shipping){err.textContent="Selecione uma opção de frete.";return}
+  if(missing.length){err.textContent="Preencha: "+missing.map(x=>x[1]).join(", ")+".";document.getElementById(missing[0][0]).focus();return}
+  err.textContent="";
+  const customer={
+    name:document.getElementById("name").value.trim(),
+    email:document.getElementById("email").value.trim(),
+    phone:document.getElementById("phone").value.trim(),
+    document:document.getElementById("document").value.trim(),
+    number:document.getElementById("number").value.trim(),
+    complement:document.getElementById("complement").value.trim(),
+    address:document.getElementById("address").value.trim(),
+    neighborhood:document.getElementById("neighborhood").value.trim(),
+    cityState:document.getElementById("cityState").value.trim(),
+    cep:document.getElementById("cep").value.trim()
+  };
+  sessionStorage.setItem("uzi18k_checkout_draft",JSON.stringify({cart,shipping,customer}));
+  document.getElementById("continue").disabled=true;
+  document.getElementById("continue").textContent="Carregando pagamento...";
+  document.getElementById("paymentSection").style.display="block";
+  try{
+    if(paymentBrickController){await paymentBrickController.unmount();paymentBrickController=null}
+    const mp=new MercadoPago("APP_USR-2b1ed92a-cfc5-43fe-8d2b-bf8aa3396e95");
+    const bricksBuilder=mp.bricks();
+    paymentBrickController=await bricksBuilder.create("payment","paymentBrick_container",{
+      initialization:{
+        amount:Number((subtotal+Number(shipping.price||0)).toFixed(2)),
+        payer:{email:customer.email,identification:{type:"CPF",number:clean(customer.document)}}
+      },
+      customization:{
+        paymentMethods:{
+          creditCard:"all",
+          debitCard:"all",
+          prepaidCard:"all",
+          bankTransfer:["pix"],
+          mercadoPago:["wallet_purchase"]
+        }
+      },
+      callbacks:{
+        onReady:()=>{document.getElementById("continue").textContent="Pagamento disponível"},
+        onSubmit:async({selectedPaymentMethod,formData})=>{
+          const paymentError=document.getElementById("paymentError");
+          paymentError.textContent="";
+          try{
+            const keyMap={"produto-pulseira-grumet":"pulseira-grumet-2-5mm","produto-pulseira-cartier":"pulseira-cartier-2mm","produto-pulseira-piastrine-3mm":"pulseira-piastrini-3mm","produto-duplix-5mm":"pulseira-duplix-5mm","produto-duplix-3mm":"pulseira-duplix-3mm","produto-corrente-duplix":"duplix-3mm","produto-cordao-entrelacado":"cordao-baiano-3mm","produto-corrente-baiano-entrelacado":"cordao-baiano-3mm","produto-corrente-veneziana":"veneziana-1mm","produto-corrente-grumet":"grumet-3mm","produto-corrente-cadeado":"cadeado-3mm","produto-corrente-cartier":"cartier-2mm","produto-corrente-elo-portugues":"elo-portugues-2mm","produto-corrente-piastrini":"piastrini-2mm","produto-escapulario-cruz":"escapulario-espirito-santo-cruz","produto-escapulario-jesus-nossa-senhora":"escapulario-nossa-senhora-cristo","produto-pulseira-veneziana":"pulseira-veneziana-1mm","produto-pulseira-cadeado":"pulseira-cadeado-2-8mm"};
+            const apiItems=cart.map(i=>{const rawKey=String(i.product_key||i.productKey||i.key||i.productId||i.id||"");const parts=rawKey.split("|");const baseKey=parts[0];const embeddedVariant=parts.length>1?parts.slice(1).join("|").trim():null;return {
+              product_key:(keyMap[baseKey]||({"elo-portges-mm":"elo-portugues-2mm","elo-portugues-mm":"elo-portugues-2mm"}[baseKey])||baseKey),
+              product_name:i.name||i.product_name||i.title||i.nome||"Produto",
+              variant:i.variant||i.size||i.tamanho||embeddedVariant||((baseKey==="produto-escapulario-cruz"||baseKey==="produto-escapulario-jesus-nossa-senhora")?"70cm":null),
+              quantity:Number(i.quantity||i.qty||i.quantidade||1),
+              unit_price:Number(i.price??i.preco??i.unit_price??i.valor??0)
+            }});
+            const payload={
+              items:apiItems,
+              customer,
+              shipping_amount:Number(shipping.price||0),
+              pix_discount_percent:0,
+              shipping:{
+                cep:customer.cep,
+                method:shipping.name||"",
+                amount:Number(shipping.price||0),
+                address:customer.address,
+                number:customer.number,
+                complement:customer.complement,
+                neighborhood:customer.neighborhood,
+                city:customer.cityState.split("/")[0]?.trim()||"",
+                state:customer.cityState.split("/")[1]?.trim()||""
+              },
+              payment:{...formData, method:selectedPaymentMethod}
+            };
+            const res=await fetch(API+"/create-order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+            const data=await res.json();
+            if(!res.ok){const d=data?.details;const detail=d?.message||d?.error||d?.cause?.[0]?.description||d?.cause?.[0]?.code||d?.status_detail||"";throw new Error((data.error||data.message||"Não foi possível processar o pagamento.")+(detail?" — "+detail:""));}
+            sessionStorage.setItem("uzi18k_checkout_result",JSON.stringify(data));
+            if(data?.order_id) startPaymentStatusPolling(data.order_id);
+            const pm=data?.payment?.payment_method||data?.payment?.paymentMethod||{};
+            const qrCode=pm.qr_code||pm.qrCode||null;
+            const qrBase64=pm.qr_code_base64||pm.qr_code_base64||pm.qrCodeBase64||null;
+            if((selectedPaymentMethod==="pix"||pm.id==="pix")&&(qrCode||qrBase64)){
+              const box=document.getElementById("pixResult");
+              const qr=document.getElementById("pixQr");
+              const copyWrap=document.getElementById("pixCopyWrap");
+              const copy=document.getElementById("pixCopy");
+              const status=document.getElementById("pixStatus");
+              box.style.display="block";
+              status.textContent="Pix gerado. Escaneie o QR Code ou use o código Copia e Cola.";
+              if(qrBase64){qr.src="data:image/jpeg;base64,"+qrBase64;qr.style.display="block"}
+              if(qrCode){copy.value=qrCode;copyWrap.style.display="block"}
+              document.getElementById("pixCopyBtn").onclick=async()=>{
+                try{await navigator.clipboard.writeText(copy.value);document.getElementById("pixCopyBtn").textContent="Copiado ✓";setTimeout(()=>document.getElementById("pixCopyBtn").textContent="Copiar",1800)}
+                catch{copy.focus();copy.select();document.execCommand("copy");document.getElementById("pixCopyBtn").textContent="Copiado ✓"}
+              };
+              box.scrollIntoView({behavior:"smooth",block:"center"});
+            }
+            paymentError.style.color="#8be28b";
+            paymentError.textContent="Pagamento enviado. Aguarde a confirmação.";
+            return data;
+          }catch(e){paymentError.textContent=e.message;throw e}
+        },
+        onError:error=>{document.getElementById("paymentError").textContent="Erro no formulário de pagamento. Confira os dados e tente novamente.";console.error(error)}
+      }
+    });
+  }catch(e){
+    document.getElementById("paymentError").textContent=e.message||"Não foi possível carregar o pagamento.";
+    document.getElementById("continue").disabled=false;
+    document.getElementById("continue").textContent="Continuar para pagamento";
+  }
+}
+document.getElementById("continue").onclick=openPayment;</script>
+</body></html>
