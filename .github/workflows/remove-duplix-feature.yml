@@ -1,0 +1,46 @@
+name: UZI18K one-time cleanup
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Remove Duplix featured section
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path("index.html")
+          s = p.read_text(encoding="utf-8")
+
+          pattern = re.compile(
+              r'<section class="feature">[\\s\\S]*?</section>\\s*(?=<section class="section" id="mais-vendidos">)'
+          )
+          s2, count = pattern.subn("", s, count=1)
+
+          if count != 1:
+              raise SystemExit("Duplix featured section not found; refusing to modify index.html")
+
+          p.write_text(s2, encoding="utf-8")
+          print("Removed Duplix featured section.")
+          PY
+
+      - name: Commit and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/remove-duplix-feature.yml
+          git add index.html
+          git commit -m "fix: remove Duplix featured section"
+          git push
