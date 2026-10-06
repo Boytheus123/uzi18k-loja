@@ -137,6 +137,7 @@ document.getElementById("quote").onclick=async()=>{
   const quoteData=await quoteRes.json();if(!quoteRes.ok)throw new Error(quoteData.error||"Não foi possível validar o estoque e os preços.");
   catalogQuote=quoteData;
   pixSubtotal=Number((quoteData.items||[]).reduce((s,i)=>s+Number(i.pix_subtotal||0),0));
+  document.getElementById("pixTotal").textContent=money(pixSubtotal);
   el.innerHTML=(data.quotes||[]).map((q,n)=>'<div class="option" data-i="'+n+'"><strong>'+q.name+'</strong><br><span class="muted">'+(q.company||"")+(q.delivery_time?" · "+q.delivery_time+" dias úteis":"")+'</span><br><strong>'+money(q.price)+'</strong></div>').join("")||'<span class="muted">Nenhuma opção disponível.</span>';
   el.querySelectorAll(".option").forEach(o=>o.onclick=()=>{el.querySelectorAll(".option").forEach(x=>x.style.borderColor="#333");o.style.borderColor="#d4af37";shipping=data.quotes[Number(o.dataset.i)];document.getElementById("freight").textContent=money(shipping.price);document.getElementById("total").textContent=money(subtotal+shipping.price);document.getElementById("pixTotal").textContent=money(pixSubtotal+Number(shipping.price||0));document.getElementById("continue").disabled=false});
  }catch(e){el.innerHTML='<span class="error">'+e.message+"</span>"}
