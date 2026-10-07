@@ -1,3 +1,4 @@
+(function(){try{if(!document.querySelector('link[rel="icon"]')){const l=document.createElement('link');l.rel='icon';l.type='image/svg+xml';l.href='./logo-uzi18k.svg';document.head.appendChild(l);}}catch(e){}})();
 (function () {
   'use strict';
   const SUPABASE_URL = 'https://meulxqleymbjkedaagby.supabase.co';
