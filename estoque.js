@@ -1,4 +1,4 @@
-(function(){try{if(!document.querySelector('link[rel="icon"]')){const l=document.createElement('link');l.rel='icon';l.type='image/svg+xml';l.href='./favicon.svg?v=2';document.head.appendChild(l);}}catch(e){}})();
+(function(){try{if(!document.querySelector('link[rel="icon"]')){const l=document.createElement('link');l.rel='icon';l.type='image/svg+xml';l.href='./favicon.svg?v=3';document.head.appendChild(l);}}catch(e){}})();
 (function () {
   'use strict';
   const SUPABASE_URL = 'https://meulxqleymbjkedaagby.supabase.co';
