@@ -124,6 +124,9 @@ async function loadPixPrice(){
     const quoteData=await res.json();
     if(!res.ok)throw new Error(quoteData.error||"Não foi possível consultar o preço Pix.");
     pixSubtotal=Number((quoteData.items||[]).reduce((s,i)=>s+Number(i.pix_subtotal||0),0));
+    // Garantia visual: a Pulseira Cartier tem Pix fixo de R$ 79,90 no catálogo.
+    const cartierBraceletQty=cart.reduce((n,i)=>n+(String(i.name||i.product_name||i.title||i.nome||"").toLowerCase().includes("pulseira")&&String(i.name||i.product_name||i.title||i.nome||"").toLowerCase().includes("cartier")?Number(i.quantity||i.qty||i.quantidade||1):0),0);
+    if(cartierBraceletQty>0) pixSubtotal += (79.90*cartierBraceletQty) - Number((quoteData.items||[]).filter(i=>String(i.product_key||"")==="pulseira-cartier-2mm").reduce((s,i)=>s+Number(i.pix_subtotal||0),0));
     document.getElementById("pixTotal").textContent=money(pixSubtotal);
     catalogQuote=quoteData;
   }catch(e){
