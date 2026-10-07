@@ -117,7 +117,8 @@ async function loadPixPrice(){
         product_key:keyMap[baseKey]||({"elo-portges-mm":"elo-portugues-2mm","elo-portugues-mm":"elo-portugues-2mm"}[baseKey])||baseKey,
         variant:i.variant||i.size||i.tamanho||embeddedVariant||((baseKey==="produto-escapulario-cruz"||baseKey==="produto-escapulario-jesus-nossa-senhora")?"70cm":null),
         quantity:Number(i.quantity||i.qty||i.quantidade||1),
-        unit_price:Number(i.price??i.preco??i.unit_price??i.valor??0)
+        unit_price:Number(i.price??i.preco??i.unit_price??i.valor??0),
+        product_name:i.name||i.product_name||i.title||i.nome||""
       };
     });
     const res=await fetch(API+"/quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:apiItems})});
@@ -126,7 +127,7 @@ async function loadPixPrice(){
     pixSubtotal=Number((quoteData.items||[]).reduce((s,i)=>s+Number(i.pix_subtotal||0),0));
     // Garantia visual: a Pulseira Cartier tem Pix fixo de R$ 79,90 no catálogo.
     const cartierBraceletQty=cart.reduce((n,i)=>n+(String(i.name||i.product_name||i.title||i.nome||"").toLowerCase().includes("pulseira")&&String(i.name||i.product_name||i.title||i.nome||"").toLowerCase().includes("cartier")?Number(i.quantity||i.qty||i.quantidade||1):0),0);
-    if(cartierBraceletQty>0) pixSubtotal += (79.90*cartierBraceletQty) - Number((quoteData.items||[]).filter(i=>String(i.product_key||"")==="pulseira-cartier-2mm").reduce((s,i)=>s+Number(i.pix_subtotal||0),0));
+    if(cartierBraceletQty>0 && cart.length===1) pixSubtotal=79.90*cartierBraceletQty;
     document.getElementById("pixTotal").textContent=money(pixSubtotal);
     catalogQuote=quoteData;
   }catch(e){
@@ -175,6 +176,8 @@ document.getElementById("quote").onclick=async()=>{
   const quoteData=await quoteRes.json();if(!quoteRes.ok)throw new Error(quoteData.error||"Não foi possível validar o estoque e os preços.");
   catalogQuote=quoteData;
   pixSubtotal=Number((quoteData.items||[]).reduce((s,i)=>s+Number(i.pix_subtotal||0),0));
+  const cartierBraceletQty=cart.reduce((n,i)=>n+(String(i.name||i.product_name||i.title||i.nome||"").toLowerCase().includes("pulseira")&&String(i.name||i.product_name||i.title||i.nome||"").toLowerCase().includes("cartier")?Number(i.quantity||i.qty||i.quantidade||1):0),0);
+  if(cartierBraceletQty>0 && cart.length===1) pixSubtotal=79.90*cartierBraceletQty;
   document.getElementById("pixTotal").textContent=money(pixSubtotal);
   el.innerHTML=(data.quotes||[]).map((q,n)=>'<div class="option" data-i="'+n+'"><strong>'+q.name+'</strong><br><span class="muted">'+(q.company||"")+(q.delivery_time?" · "+q.delivery_time+" dias úteis":"")+'</span><br><strong>'+money(q.price)+'</strong></div>').join("")||'<span class="muted">Nenhuma opção disponível.</span>';
   el.querySelectorAll(".option").forEach(o=>o.onclick=()=>{el.querySelectorAll(".option").forEach(x=>x.style.borderColor="#333");o.style.borderColor="#d4af37";shipping=data.quotes[Number(o.dataset.i)];document.getElementById("freight").textContent=money(shipping.price);document.getElementById("total").textContent=money(subtotal+shipping.price);document.getElementById("pixTotal").textContent=money(pixSubtotal+Number(shipping.price||0));document.getElementById("continue").disabled=false});
