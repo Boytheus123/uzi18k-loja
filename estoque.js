@@ -16,3 +16,76 @@
   async function load(){const sb=client();if(!sb)return;const products=Object.keys(PRODUCT_KEYS).map(id=>document.getElementById(id)).filter(Boolean);if(!products.length)return;const keys=[...new Set(products.map(p=>PRODUCT_KEYS[p.id]))];const q=await sb.from('inventory_items').select('product_key,variant,stock,active').in('product_key',keys).eq('active',true);if(q.error){console.error('Erro ao consultar estoque:',q.error);return;}const grouped={};(q.data||[]).forEach(r=>{(grouped[r.product_key]||(grouped[r.product_key]=[])).push(r);});products.forEach(p=>{const rows=grouped[PRODUCT_KEYS[p.id]]||[];if(rows.length)connect(p,rows);});}
   function start(){loadLib(load);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
+
+/* UZI18K — cálculo de frete real nas páginas de produto */
+window.calculateUziShipping = async function(event,button){
+  if(event) event.preventDefault();
+  const box=button?.closest('.uzi-shipping-box');
+  const input=box?.querySelector('.uzi-shipping-cep');
+  const result=box?.querySelector('.uzi-shipping-result');
+  const cep=(input?.value||'').replace(/\D/g,'');
+  if(cep.length!==8){
+    if(input){input.focus();input.setCustomValidity('Digite um CEP válido com 8 números.');input.reportValidity();}
+    return;
+  }
+  if(input) input.setCustomValidity('');
+
+  const page=button?.closest('.v75-product-page');
+  const title=page?.querySelector('h1')?.textContent?.trim() || 'produto UZI18K';
+  const productId=page?.id || '';
+  const productKeys={
+    'produto-duplix-5mm':'pulseira-duplix-5mm',
+    'produto-pulseira-cartier':'pulseira-cartier-2mm',
+    'produto-pulseira-grumet':'pulseira-grumet-2-5mm',
+    'produto-pulseira-piastrine-3mm':'pulseira-piastrini-3mm',
+    'produto-duplix-3mm':'pulseira-duplix-3mm',
+    'produto-pulseira-veneziana':'pulseira-veneziana-1mm',
+    'produto-pulseira-cadeado':'pulseira-cadeado-2-8mm',
+    'produto-corrente-duplix':'duplix-3mm',
+    'produto-cordao-entrelacado':'cordao-baiano-3mm',
+    'produto-corrente-veneziana':'veneziana-1mm',
+    'produto-corrente-grumet':'grumet-3mm',
+    'produto-corrente-cadeado':'cadeado-3mm',
+    'produto-corrente-cartier':'cartier-2mm',
+    'produto-corrente-elo-portugues':'elo-portugues-2mm',
+    'produto-corrente-piastrini':'piastrini-2mm',
+    'produto-escapulario-cruz':'escapulario-espirito-santo-cruz',
+    'produto-escapulario-jesus-nossa-senhora':'escapulario-nossa-senhora-cristo',
+    'produto-ancora':'pingente-ancora'
+  };
+  const productKey=productKeys[productId] || productId;
+  const selectedSize=page?.querySelector('.v75-size.is-selected');
+  const variant=selectedSize?.getAttribute('data-size') || selectedSize?.textContent?.replace(/•.*$/,'').trim() || null;
+  const pretty=cep.slice(0,5)+'-'+cep.slice(5);
+
+  if(result){
+    result.innerHTML='<strong style="color:#d5ad54">CEP '+pretty+'</strong><br>Calculando opções de envio...';
+    result.classList.add('is-visible');
+  }
+
+  try{
+    const res=await fetch('https://meulxqleymbjkedaagby.supabase.co/functions/v1/shipping-quote',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        destination_cep:cep,
+        items:[{product_key:productKey,product_name:title,variant:variant,quantity:1,unit_price:0}]
+      })
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error || 'Não foi possível calcular o frete.');
+
+    const quotes=Array.isArray(data.quotes)?data.quotes:[];
+    if(!quotes.length){
+      if(result) result.innerHTML='<strong style="color:#d5ad54">CEP '+pretty+'</strong><br>Nenhuma opção de envio disponível para este CEP.';
+      return;
+    }
+
+    if(result){
+      result.innerHTML='<strong style="color:#d5ad54">CEP '+pretty+'</strong><div style="margin-top:10px;display:grid;gap:8px;">'+
+        quotes.map(q=>'<div style="padding:11px 12px;border:1px solid rgba(213,173,84,.2);border-radius:6px;background:#090909;"><strong style="color:#f5f0df">'+(q.name||'Frete')+'</strong><br><span style="color:#aaa">'+(q.company||'')+(q.delivery_time?' · '+q.delivery_time+' dias úteis':'')+'</span><br><strong style="color:#d5ad54">'+new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(q.price||0))+'</strong></div>').join('')+'</div>';
+    }
+  }catch(e){
+    if(result) result.innerHTML='<strong style="color:#ff7070">Erro ao calcular o frete</strong><br>'+String(e.message||e);
+  }
+};
