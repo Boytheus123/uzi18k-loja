@@ -18,11 +18,12 @@
 <button id="start" type="button">Carregar formulário de teste</button>
 <div id="paymentBrick_container" style="margin-top:20px"></div>
 <div id="result" role="status"></div>
-<p class="muted">Esta página ainda precisa ser conectada à API isolada de testes antes de enviar pagamentos. Não conclua nenhum pagamento até essa etapa estar pronta.</p>
+<p class="muted">A página consulta a API isolada para verificar a configuração. O envio de pagamentos continua bloqueado até a integração de pagamento ser implementada e validada.</p>
 <p><a class="back" href="./">Voltar para a loja</a></p>
 </section></main>
 <script>
 const TEST_PUBLIC_KEY = "APP_USR-95cdfd02-dbdb-492e-bedb-442ef397d4d0";
+const TEST_API = "https://meulxqleymbjkedaagby.supabase.co/functions/v1/checkout-test-api/health";
 const result = document.getElementById("result");
 let controller = null;
 document.getElementById("start").addEventListener("click", async () => {
@@ -33,13 +34,20 @@ document.getElementById("start").addEventListener("click", async () => {
     return;
   }
   try {
+    result.textContent = "Verificando a API isolada de testes...";
+    const healthResponse = await fetch(TEST_API, { method: "GET", headers: { "Accept": "application/json" } });
+    if (!healthResponse.ok) throw new Error("A API de teste não respondeu corretamente (HTTP " + healthResponse.status + ").");
+    const health = await healthResponse.json();
+    if (!health.ok || health.service !== "uzi18k-checkout-test-api" || !health.testCredentialConfigured || health.paymentsEnabled !== false) {
+      throw new Error("A API não confirmou a configuração segura de testes. Nenhum pagamento foi enviado.");
+    }
     if (controller) { await controller.unmount(); controller = null; }
     const mp = new MercadoPago(TEST_PUBLIC_KEY);
     controller = await mp.bricks().create("payment", "paymentBrick_container", {
       initialization: { amount: 1.00, payer: { email } },
       customization: { paymentMethods: { creditCard: "all", debitCard: "all", prepaidCard: "all", bankTransfer: ["pix"], mercadoPago: ["wallet_purchase"] } },
       callbacks: {
-        onReady: () => { result.textContent = "Formulário carregado. A API isolada de testes ainda precisa ser conectada; não envie o formulário nem conclua pagamento."; },
+        onReady: () => { result.textContent = "API isolada verificada e formulário carregado. O envio de pagamento permanece bloqueado; nenhum pagamento foi enviado."; },
         onSubmit: async () => {
           result.textContent = "Envio bloqueado por segurança: a API isolada de testes ainda não foi conectada. Nenhuma solicitação de pagamento foi enviada.";
           throw new Error("API de teste ainda não conectada.");
@@ -48,7 +56,7 @@ document.getElementById("start").addEventListener("click", async () => {
       }
     });
   } catch (e) {
-    result.textContent = "Erro ao carregar o formulário: " + (e.message || "erro desconhecido");
+    result.textContent = "Não foi possível validar a API ou carregar o formulário: " + (e.message || "erro desconhecido") + " Nenhum pagamento foi enviado.";
   }
 });
 </script>
