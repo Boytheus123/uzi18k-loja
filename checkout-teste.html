@@ -48,7 +48,9 @@ document.getElementById("start").addEventListener("click", async () => {
     if (!health.ok || health.service !== "uzi18k-checkout-test-api" || !health.testCredentialConfigured || health.paymentsEnabled !== false) {
       throw new Error("A API não confirmou a configuração segura de testes. Nenhum pagamento foi enviado.");
     }
+    result.textContent = "API conectada e configuração de teste confirmada. Carregando o formulário do Mercado Pago...";
     if (controller) { await controller.unmount(); controller = null; }
+    if (typeof MercadoPago !== "function") throw new Error("O SDK do Mercado Pago não carregou. Recarregue a página e tente novamente.");
     const mp = new MercadoPago(TEST_PUBLIC_KEY);
     controller = await mp.bricks().create("payment", "paymentBrick_container", {
       initialization: { amount: 1.00, payer: { email } },
