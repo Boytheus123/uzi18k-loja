@@ -63,7 +63,7 @@ document.getElementById("start").addEventListener("click", async () => {
       }
     });
   } catch (e) {
-    result.textContent = "Não foi possível validar a API ou carregar o formulário: " + (e.message || "erro desconhecido") + " Nenhum pagamento foi enviado.";
+    result.textContent = (e.name === "AbortError" ? "A API de teste demorou mais de 10 segundos para responder." : "Não foi possível validar a API ou carregar o formulário: " + (e.message || "erro desconhecido")) + " Nenhum pagamento foi enviado.";
   }
 });
 </script>
