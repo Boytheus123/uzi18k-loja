@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout de teste | UZI18K</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080808;color:#f5f5f5;font-family:Arial,sans-serif}.wrap{max-width:680px;margin:36px auto;padding:20px}.card{background:#111;border:1px solid #292929;border-radius:14px;padding:24px}.warning{padding:14px;border:1px solid #8b6b20;border-radius:10px;background:#211b0d;color:#f4d78a;line-height:1.5}.muted{color:#aaa;line-height:1.5}label{display:block;font-size:13px;color:#bbb;margin:18px 0 6px}input{width:100%;padding:13px;border-radius:9px;border:1px solid #333;background:#181818;color:#fff}button{width:100%;padding:14px;border:0;border-radius:10px;background:#d4af37;color:#080808;font-weight:800;cursor:pointer;margin-top:18px}#result{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:16px;color:#b8e7b8}.back{color:#d4af37}code{overflow-wrap:anywhere}
+</style>
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+</head>
+<body><main class="wrap"><section class="card">
+<h1>Checkout de teste UZI18K</h1>
+<div class="warning"><strong>Ambiente de teste.</strong> Esta página não é o checkout normal da loja. O teste deve usar somente credenciais e usuário de teste do Mercado Pago. Não informe cartão real.</div>
+<p class="muted">Objetivo: validar a integração sem criar pedido de venda nem movimentar o estoque real. Valor de teste fixo: R$ 1,00.</p>
+<label for="email">E-mail do usuário de teste do Mercado Pago</label>
+<input id="email" type="email" placeholder="E-mail do usuário de teste" autocomplete="off">
+<button id="start" type="button">Carregar formulário de teste</button>
+<div id="paymentBrick_container" style="margin-top:20px"></div>
+<div id="result" role="status"></div>
+<p class="muted">Esta página ainda precisa ser conectada à API isolada de testes antes de enviar pagamentos. Não conclua nenhum pagamento até essa etapa estar pronta.</p>
+<p><a class="back" href="./">Voltar para a loja</a></p>
+</section></main>
+<script>
+const TEST_PUBLIC_KEY = "APP_USR-95cdfd02-dbdb-492e-bedb-442ef397d4d0";
+const result = document.getElementById("result");
+let controller = null;
+document.getElementById("start").addEventListener("click", async () => {
+  result.textContent = "";
+  const email = document.getElementById("email").value.trim();
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    result.textContent = "Informe o e-mail do usuário de teste.";
+    return;
+  }
+  try {
+    if (controller) { await controller.unmount(); controller = null; }
+    const mp = new MercadoPago(TEST_PUBLIC_KEY);
+    controller = await mp.bricks().create("payment", "paymentBrick_container", {
+      initialization: { amount: 1.00, payer: { email } },
+      customization: { paymentMethods: { creditCard: "all", debitCard: "all", prepaidCard: "all", bankTransfer: ["pix"], mercadoPago: ["wallet_purchase"] } },
+      callbacks: {
+        onReady: () => { result.textContent = "Formulário carregado. A API isolada de testes ainda precisa ser conectada; não envie o formulário nem conclua pagamento."; },
+        onSubmit: async () => {
+          result.textContent = "Envio bloqueado por segurança: a API isolada de testes ainda não foi conectada. Nenhuma solicitação de pagamento foi enviada.";
+          throw new Error("API de teste ainda não conectada.");
+        },
+        onError: () => { result.textContent = "Não foi possível carregar o formulário. Confira a Public Key de teste e o usuário de teste."; }
+      }
+    });
+  } catch (e) {
+    result.textContent = "Erro ao carregar o formulário: " + (e.message || "erro desconhecido");
+  }
+});
+</script>
+</body></html>
