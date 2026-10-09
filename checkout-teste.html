@@ -35,7 +35,14 @@ document.getElementById("start").addEventListener("click", async () => {
   }
   try {
     result.textContent = "Verificando a API isolada de testes...";
-    const healthResponse = await fetch(TEST_API, { method: "GET", headers: { "Accept": "application/json" } });
+    const healthController = new AbortController();
+    const healthTimeout = setTimeout(() => healthController.abort(), 10000);
+    let healthResponse;
+    try {
+      healthResponse = await fetch(TEST_API, { method: "GET", headers: { "Accept": "application/json" }, signal: healthController.signal, cache: "no-store" });
+    } finally {
+      clearTimeout(healthTimeout);
+    }
     if (!healthResponse.ok) throw new Error("A API de teste não respondeu corretamente (HTTP " + healthResponse.status + ").");
     const health = await healthResponse.json();
     if (!health.ok || health.service !== "uzi18k-checkout-test-api" || !health.testCredentialConfigured || health.paymentsEnabled !== false) {
