@@ -279,9 +279,11 @@
 
     <header>
       <div class="container header-content">
-        <h1>UZI<span class="gold">18K</span> — Estoque</h1>
+        <h1>UZI<span class="gold">18K</span> — Administração</h1>
 
         <div class="top-actions">
+          <button class="btn-dark" onclick="showSection('inventory')">Estoque</button>
+          <button class="btn-dark" onclick="showSection('orders')">Pedidos</button>
           <button class="btn-dark" onclick="loadInventory()">
             Atualizar
           </button>
@@ -297,6 +299,20 @@
     <main class="container">
 
       <div id="mainMessage" class="message"></div>
+
+      <section id="ordersSection" class="hidden">
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+            <h2 style="margin:0">Pedidos recebidos</h2>
+            <button class="btn-gold" onclick="loadOrders()">Atualizar pedidos</button>
+          </div>
+          <p style="color:#999;font-size:13px">Pedidos e status registrados no Mercado Pago. Atualize para consultar os dados mais recentes salvos no banco.</p>
+          <div id="ordersMessage" class="message"></div>
+          <div id="ordersList" class="inventory-list">Carregando pedidos...</div>
+        </div>
+      </section>
+
+      <section id="inventorySection">
 
       <!-- ESTATÍSTICAS -->
       <div class="stats">
@@ -365,6 +381,7 @@
         </div>
 
       </div>
+      </section>
 
     </main>
   </div>
@@ -459,6 +476,78 @@
     loadInventory();
   }
 
+
+  // Alternar entre estoque e pedidos
+  function showSection(section) {
+    document.getElementById("inventorySection").classList.toggle("hidden", section !== "inventory");
+    document.getElementById("ordersSection").classList.toggle("hidden", section !== "orders");
+    if (section === "orders") loadOrders();
+    if (section === "inventory") loadInventory();
+  }
+
+  // Pedidos: somente usuários autenticados com permissão administrativa podem consultar estas tabelas.
+  async function loadOrders() {
+    const list = document.getElementById("ordersList");
+    list.textContent = "Carregando pedidos...";
+    const { data, error } = await supabaseClient
+      .from("orders")
+      .select("id,order_number,status,payment_status,mercado_pago_status,customer_name,customer_email,customer_phone,shipping_cep,shipping_address,shipping_number,shipping_complement,shipping_neighborhood,shipping_city,shipping_state,shipping_method,shipping_amount,subtotal_amount,total_amount,payment_method,created_at,paid_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) {
+      list.textContent = "Não foi possível carregar pedidos. Confira se sua conta possui permissão administrativa.";
+      console.error("load_orders_error", error);
+      return;
+    }
+    if (!data || !data.length) {
+      list.textContent = "Nenhum pedido encontrado.";
+      return;
+    }
+    list.innerHTML = data.map(order => {
+      const status = String(order.status || "desconhecido");
+      const label = ({pending_payment:"Aguardando pagamento",paid:"Pago",processing:"Em processamento",cancelled:"Cancelado",failed:"Falhou",refunded:"Reembolsado"})[status] || status;
+      const date = order.created_at ? new Date(order.created_at).toLocaleString("pt-BR") : "—";
+      return `<article class="item" style="grid-template-columns:1fr">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div><div class="item-name">${escapeHtml(order.order_number || order.id)}</div>
+          <div class="item-info">${escapeHtml(date)} · ${escapeHtml(order.payment_method || "Pagamento não informado")}</div></div>
+          <div style="text-align:right"><strong>${escapeHtml(formatBRL(order.total_amount))}</strong><br><span class="badge ${status === "paid" ? "available" : status === "pending_payment" ? "low" : "out"}">${escapeHtml(label)}</span></div>
+        </div>
+        <div class="item-info">Cliente: ${escapeHtml(order.customer_name || "—")} · ${escapeHtml(order.customer_email || "—")} · ${escapeHtml(order.customer_phone || "—")}</div>
+        <div class="item-info">Pagamento: ${escapeHtml(order.payment_status || order.mercado_pago_status || "Sem atualização")} · Frete: ${escapeHtml(formatBRL(order.shipping_amount))} · Produtos: ${escapeHtml(formatBRL(order.subtotal_amount))}</div>
+        <div class="item-info">Entrega: ${escapeHtml([order.shipping_address, order.shipping_number, order.shipping_complement, order.shipping_neighborhood, order.shipping_city, order.shipping_state, order.shipping_cep].filter(Boolean).join(", ") || "Endereço não informado")} · Serviço: ${escapeHtml(order.shipping_method || "—")}</div>
+        <div><button class="btn-dark" onclick="toggleOrderItems('${escapeHtml(order.id)}', this)">Ver itens do pedido</button><div class="item-info order-items hidden" style="margin-top:10px"></div></div>
+      </article>`;
+    }).join("");
+  }
+
+  function formatBRL(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toLocaleString("pt-BR", {style:"currency",currency:"BRL"}) : "—";
+  }
+
+  async function toggleOrderItems(orderId, button) {
+    const target = button.parentElement.querySelector(".order-items");
+    if (!target.classList.contains("hidden")) {
+      target.classList.add("hidden");
+      button.textContent = "Ver itens do pedido";
+      return;
+    }
+    target.classList.remove("hidden");
+    target.textContent = "Carregando itens...";
+    const { data, error } = await supabaseClient.from("order_items")
+      .select("product_name,product_key,variant,quantity,unit_price,subtotal")
+      .eq("order_id", orderId);
+    if (error) {
+      target.textContent = "Não foi possível carregar os itens deste pedido.";
+      console.error("load_order_items_error", error);
+      return;
+    }
+    target.innerHTML = (data || []).map(item =>
+      `<div style="padding:8px 0;border-top:1px solid #292929">${escapeHtml(item.product_name || item.product_key)} ${item.variant ? "· " + escapeHtml(item.variant) : ""} — Qtd. ${escapeHtml(item.quantity)} × ${escapeHtml(formatBRL(item.unit_price))} = <strong>${escapeHtml(formatBRL(item.subtotal))}</strong></div>`
+    ).join("") || "Nenhum item encontrado.";
+    button.textContent = "Ocultar itens";
+  }
 
   // CARREGAR ESTOQUE
   async function loadInventory() {
