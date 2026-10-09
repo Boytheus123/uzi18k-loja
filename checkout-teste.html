@@ -29,7 +29,7 @@ let controller = null;
 document.getElementById("start").addEventListener("click", async () => {
   result.textContent = "";
   const email = document.getElementById("email").value.trim();
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     result.textContent = "Informe o e-mail do usuário de teste.";
     return;
   }
