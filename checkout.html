@@ -270,6 +270,7 @@ async function openPayment(){
               shipping_amount:Number(shipping.price||0),
               pix_discount_percent:0,
               shipping:{
+                id:shipping.id,
                 cep:customer.cep,
                 method:shipping.name||"",
                 amount:Number(shipping.price||0),
